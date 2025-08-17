@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>All Sports News Radar</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f0fff4; /* Honeydew Green */
+        }
+        /* Custom scrollbar for better aesthetics */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #f1f1f1; }
+        ::-webkit-scrollbar-thumb { background: #888; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: #555; }
+        /* Simple spinner animation */
+        .spinner {
+            border: 4px solid rgba(0, 0, 0, 0.1);
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            border-left-color: #10B981; /* Green */
+            animation: spin 1s ease infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body class="antialiased text-gray-800">
+
+    <div class="container mx-auto p-4 md:p-8 max-w-4xl">
+
+        <header class="mb-8 text-center">
+            <h1 class="text-4xl md:text-5xl font-bold text-gray-900 mb-2">All Sports News Radar</h1>
+            <p class="text-gray-600">The latest sports headlines from around the world, updated every minute.</p>
+            <div id="last-updated" class="text-sm text-gray-500 mt-2"></div>
+        </header>
+
+        <div class="mb-8">
+            <input type="text" id="search-input" placeholder="Search for sports news..." class="w-full px-4 py-3 border border-gray-300 rounded-full shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 transition">
+        </div>
+        
+        <div id="loading-status" class="hidden bg-blue-100 text-blue-800 text-sm font-semibold text-center p-3 rounded-lg mb-6">
+            <span id="loading-text"></span>
+        </div>
+
+        <div id="loader" class="flex justify-center items-center py-10">
+            <div class="spinner"></div>
+        </div>
+        
+        <main id="news-feed" class="space-y-6">
+            </main>
+
+        <div class="mt-12 text-center">
+            <a href="#" id="toggle-yesterday" class="text-green-600 font-semibold hover:underline">What we shared Yesterday</a>
+            <div id="yesterday-news-container" class="hidden mt-6">
+                <h2 class="text-2xl font-bold text-gray-800 mb-6">Yesterday's News</h2>
+                <div id="yesterday-news-feed" class="space-y-6">
+                    </div>
+            </div>
+        </div>
+
+    </div>
+    
+    <footer class="text-center py-6">
+        <p class="text-sm text-gray-500 mb-2">Created by Manuel George</p>
+    </footer>
+
+    <script>
+        // DOM Element References
+        const newsFeed = document.getElementById('news-feed');
+        const yesterdayNewsFeed = document.getElementById('yesterday-news-feed');
+        const loader = document.getElementById('loader');
+        const lastUpdatedElement = document.getElementById('last-updated');
+        const searchInput = document.getElementById('search-input');
+        const toggleYesterdayBtn = document.getElementById('toggle-yesterday');
+        const yesterdayContainer = document.getElementById('yesterday-news-container');
+        const loadingStatus = document.getElementById('loading-status');
+        const loadingText = document.getElementById('loading-text');
+
+        // --- State Management ---
+        let allArticles = [];
+        let searchTerm = '';
+
+        // --- Configuration ---
+        const API_KEY = "ddgme7y9gsrkqlrctrypdfgmrskkdffqmygrkc7e";
+        const REFRESH_INTERVAL = 60000; // 1 minute
+        const RSS_SOURCES = [
+            'http://feeds.feedburner.com/ndtvspo', 'https://www.thehindu.com/sport/feeder/default.rss', 'https://timesofindia.indiatimes.com/rssfeeds/4719148.cms', 'https://indianexpress.com/section/sports/feed/', 'https://www.hindustantimes.com/rss/sports/rssfeed.xml', 'https://www.sportskeeda.com/feed', 'https://www.mirror.co.uk/sport/?service=rss', 'https://sportstar.thehindu.com/feeder/default.rss', 'https://www.telegraph.co.uk/sport/rss.xml', 'https://rss.nytimes.com/services/xml/rss/nyt/Sports.xml', 'https://www.espncricinfo.com/rss/content/story/feeds/0.xml', 'https://www.cricbuzz.com/cricket-news/latest-news/rss', 'https://www.goal.com/en/feeds/news/', 'https://www.espn.com/espn/rss/soccer/news', 'https://www.skysports.com/rss/11095', 'http://feeds.bbci.co.uk/sport/football/rss.xml', 'https://www.theguardian.com/football/rss', 'https://www.atptour.com/en/media/rss-feed', 'https://www.tennis.com/rss/', 'https://www.fide.com/feed', 'http://www.chess.com/rss/news', 'https://www.fih.hockey/rss', 'https://www.thehockeypaper.co.uk/feed/', 'https://worldathletics.org/rss/news'
+        ];
+
+        // --- SVG Icons for Sports ---
+        const icons = {
+            Cricket: `<svg xmlns="http://www.w3.org/2000/svg" class="w-10 h-10 text-gray-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2Z"/><path d="m15.32 15.32 3.36 3.36"/><path d="M12 12a3 3 0 0 0-3 3"/><path d="M12 8a4 4 0 0 0-4 4"/></svg>`,
+            Football: `<svg xmlns="http://www.w3.org/2000/svg" class="w-10 h-10 text-gray-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polygon points="12 2 12 12 18 12 12 22 12 12 6 12 12 2"></polygon></svg>`,
+            Tennis: `<svg xmlns="http://www.w3.org/2000/svg" class="w-10 h-10 text-gray-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M12 12a5 5 0 0 0-5 5h10a5 5 0 0 0-5-5z"></path><path d="M12 2v2"></path><path d="M12 20v2"></path><path d="M5 7l-1.5 1.5"></path><path d="M19 7l1.5 1.5"></path></svg>`,
+            Hockey: `<svg xmlns="http://www.w3.org/2000/svg" class="w-10 h-10 text-gray-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.16 3.42a7.5 7.5 0 0 0-10.74 8.44l6.12 6.13a2 2 0 0 0 2.83 0l6.13-6.13a7.5 7.5 0 0 0-4.34-12.78z"></path><path d="m14 14-8 8"></path></svg>`,
+            Athletics: `<svg xmlns="http://www.w3.org/2000/svg" class="w-10 h-10 text-gray-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a5 5 0 0 0-5 5c0 1.5.7 2.8 1.7 3.7L12 15l3.3-4.3c1- .9 1.7-2.2 1.7-3.7a5 5 0 0 0-5-5z"></path><path d="M12 15v7"></path><path d="M9 22h6"></path><path d="M5 11.5a5 5 0 0 1 7-4.5 5 5 0 0 1 7 4.5"></path></svg>`,
+            Chess: `<svg xmlns="http://www.w3.org/2000/svg" class="w-10 h-10 text-gray-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a2 2 0 0 0-2-2h-1a2 2 0 0 0-2 2v2H9a2 2 0 0 0-2 2v1a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2v-1a2 2 0 0 0-2-2h-1V8z"></path><path d="M20 18v-2a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v2Z"></path><path d="M4 14v4h16v-4"></path><path d="M12 2v4"></path></svg>`,
+            'Formula 1': `<svg xmlns="http://www.w3.org/2000/svg" class="w-10 h-10 text-gray-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L3 7v10l9 5 9-5V7L12 2zm0 2.69L18.31 8 12 11.31 5.69 8 12 4.69zM4 8.13V16l7 3.87v-7.74L4 8.13zm16 0L13 12.26v7.74L20 16V8.13z"></path></svg>`,
+            General: `<svg class="w-10 h-10 text-gray-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 7.5h1.5m-1.5 3h1.5m-7.5 3h7.5m-7.5 3h7.5m3-9h3.375c.621 0 1.125.504 1.125 1.125V18a2.25 2.25 0 0 1-2.25 2.25H6.75A2.25 2.25 0 0 1 4.5 18V6.375c0-.621.504-1.125 1.125-1.125H9.75" /></svg>`
+        };
+        
+        // --- BATCH FETCHING LOGIC ---
+        async function fetchInBatches() {
+            console.log('Fetching latest news in batches...');
+            if (allArticles.length === 0) showLoader();
+            loadingStatus.classList.remove('hidden');
+
+            const batchSize = 5;
+            let currentArticles = [];
+
+            for (let i = 0; i < RSS_SOURCES.length; i += batchSize) {
+                const batch = RSS_SOURCES.slice(i, i + batchSize);
+                loadingText.textContent = `Loading news batch ${i / batchSize + 1} of ${Math.ceil(RSS_SOURCES.length / batchSize)}...`;
+                
+                const promises = batch.map(async (feedUrl) => {
+                    try {
+                        const response = await fetch(`https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(feedUrl)}&api_key=${API_KEY}`);
+                        if (!response.ok) return [];
+                        const data = await response.json();
+                        if (data.status === 'ok') {
+                            const sourceTitle = data.feed.title || 'Unknown Source';
+                            return data.items.map(item => ({...item, source: sourceTitle }));
+                        }
+                    } catch (error) {
+                        console.error(`Failed to fetch ${feedUrl}`, error);
+                        return [];
+                    }
+                });
+
+                const results = await Promise.all(promises);
+                results.forEach(result => {
+                    if (result) currentArticles.push(...result);
+                });
+            }
+
+            // Process all fetched articles
+            currentArticles.sort((a, b) => new Date(b.pubDate) - new Date(a.pubDate));
+            const seenTitles = new Set();
+            allArticles = currentArticles.filter(article => {
+                const normalizedTitle = (article.title || '').toLowerCase().replace(/[^a-z0-9]/g, '').substring(0, 50);
+                if (!article.title || seenTitles.has(normalizedTitle)) return false;
+                seenTitles.add(normalizedTitle);
+                return true;
+            });
+            
+            renderAllNews();
+            updateTimestamp();
+            hideLoader();
+            loadingStatus.classList.add('hidden');
+        }
+        
+        function renderAllNews() {
+            const now = new Date();
+            const twentyFourHoursAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+            const fortyEightHoursAgo = new Date(now.getTime() - 48 * 60 * 60 * 1000);
+
+            const todaysArticles = allArticles.filter(article => new Date(article.pubDate) >= twentyFourHoursAgo);
+            const yesterdaysArticles = allArticles.filter(article => new Date(article.pubDate) >= fortyEightHoursAgo && new Date(article.pubDate) < twentyFourHoursAgo);
+
+            renderSection(newsFeed, todaysArticles);
+            if (!yesterdayContainer.classList.contains('hidden')) {
+                renderSection(yesterdayNewsFeed, yesterdaysArticles);
+            }
+        }
+        
+        function renderSection(feedElement, articles) {
+            const filteredArticles = articles.filter(article => 
+                (article.title || '').toLowerCase().includes(searchTerm) || 
+                cleanDescription(article.description).toLowerCase().includes(searchTerm)
+            );
+
+            if (filteredArticles.length === 0) {
+                 feedElement.innerHTML = `<div class="text-center text-gray-500 bg-white p-6 rounded-lg shadow-md">No news found matching your search criteria.</div>`;
+                 return;
+            }
+            
+            feedElement.innerHTML = '';
+            filteredArticles.forEach(article => {
+                const articleElement = createArticleElement(article);
+                feedElement.appendChild(articleElement);
+            });
+        }
+
+        function createArticleElement(article) {
+            const articleElement = document.createElement('article');
+            articleElement.id = article.guid || article.link;
+            articleElement.className = 'bg-white p-6 rounded-lg shadow-md hover:shadow-lg transition-shadow duration-300 flex items-start space-x-4';
+            
+            const description = cleanDescription(article.description);
+            const category = getArticleCategory(article);
+            
+            const pubDate = new Date(article.pubDate);
+            const dateString = pubDate.toLocaleDateString('en-IN', { dateStyle: 'long' });
+
+            const shareText = encodeURIComponent(`*${article.title}*\n${article.link}\n\nSee more at: ${window.location.href}`);
+            const whatsappUrl = `https://wa.me/?text=${shareText}`;
+            
+            const imageHtml = article.thumbnail
+                ? `<div class="flex-shrink-0"><img src="${article.thumbnail}" alt="News thumbnail" class="w-24 h-24 object-cover rounded-md" onerror="this.parentElement.innerHTML = createFallbackIcon('${category}');"></div>`
+                : `<div class="flex-shrink-0">${createFallbackIcon(category)}</div>`;
+
+            const contentHtml = `
+                <div class="flex-grow">
+                    <a href="${article.link}" target="_blank" rel="noopener noreferrer">
+                        <h2 class="text-xl font-bold mb-2 text-gray-800 hover:text-green-600 transition-colors duration-300">${article.title}</h2>
+                    </a>
+                    <p class="text-gray-600 mb-4">${description}</p>
+                    <div class="flex justify-between items-center text-sm text-gray-500">
+                        <span class="font-semibold text-gray-700">${(article.source || 'Unknown Source').split(' - ')[0]}</span>
+                        <div class="flex items-center space-x-4">
+                            <a href="${whatsappUrl}" target="_blank" rel="noopener noreferrer" class="text-green-500 hover:text-green-600" title="Share on WhatsApp">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.414-.003 6.557-5.338 11.892-11.894 11.892-1.99-.001-3.951-.5-5.688-1.448l-6.305 1.654zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.886-.003 2.011.564 3.963 1.648 5.684l.269.448-1.125 4.105 4.088-1.079.456.262z"/></svg>
+                            </a>
+                            <a href="${article.link}" target="_blank" rel="noopener noreferrer" class="font-semibold text-green-500 hover:underline">Read More &rarr;</a>
+                        </div>
+                    </div>
+                     <div class="flex items-center justify-between mt-2">
+                        <div class="text-xs font-medium text-green-600 bg-green-100 inline-block px-2 py-1 rounded-full">
+                            <span>${category}</span>
+                        </div>
+                        <div class="text-xs text-gray-500">
+                            <span>${dateString}</span>
+                        </div>
+                     </div>
+                </div>`;
+            
+            articleElement.innerHTML = imageHtml + contentHtml;
+            return articleElement;
+        }
+
+        function getArticleCategory(article) {
+            const content = ((article.title || '') + ' ' + cleanDescription(article.description)).toLowerCase();
+            const keywords = {
+                'Cricket': ['cricket', 'ipl', 'bcci', 'icc'], 'Football': ['football', 'soccer', 'epl', 'la liga', 'fifa', 'uefa', 'isl'], 'Tennis': ['tennis', 'atp', 'wta', 'grand slam', 'wimbledon'], 'Hockey': ['hockey', 'fih'], 'Athletics': ['athletics', 'track', 'marathon', 'olympics'], 'Chess': ['chess', 'fide'], 'Formula 1': ['f1', 'formula 1', 'motorsport']
+            };
+            for (const category in keywords) {
+                if (keywords[category].some(kw => content.includes(kw))) return category;
+            }
+            return 'General';
+        }
+
+        function createFallbackIcon(category) {
+            const iconSvg = icons[category] || icons['General'];
+            return `<div class="w-24 h-24 bg-gray-200 flex items-center justify-center rounded-md">${iconSvg}</div>`;
+        }
+        
+        function cleanDescription(htmlString) {
+            if (!htmlString) return '';
+            const doc = new DOMParser().parseFromString(htmlString, 'text/html');
+            let text = doc.body.textContent || "";
+            return text.trim().substring(0, 150) + (text.length > 150 ? '...' : '');
+        }
+        
+        function updateTimestamp() { lastUpdatedElement.textContent = `Last updated: ${new Date().toLocaleTimeString()}`; }
+        function showLoader() { loader.style.display = 'flex'; }
+        function hideLoader() { loader.style.display = 'none'; }
+        
+        function initialize() {
+            searchInput.addEventListener('input', (e) => {
+                searchTerm = e.target.value.toLowerCase();
+                renderAllNews();
+            });
+
+            toggleYesterdayBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                const isHidden = yesterdayContainer.classList.toggle('hidden');
+                e.target.textContent = isHidden ? 'What we shared Yesterday' : "Hide Yesterday's News";
+                if(!isHidden) renderAllNews();
+            });
+
+            fetchInBatches(); // Use the new batch function
+            setInterval(fetchInBatches, REFRESH_INTERVAL);
+        }
+
+        initialize();
+    </script>
+
+</body>
+</html>
