@@ -90,9 +90,21 @@
         let searchTerm = '';
 
         // --- Configuration ---
-        const REFRESH_INTERVAL = 60000; // 1 minute
+        const REFRESH_INTERVAL = 300000; // 5 minutes
+        // A refined list of more stable news sources
         const RSS_SOURCES = [
-            'http://feeds.feedburner.com/ndtvspo', 'https://www.thehindu.com/sport/feeder/default.rss', 'https://timesofindia.indiatimes.com/rssfeeds/4719148.cms', 'https://indianexpress.com/section/sports/feed/', 'https://www.hindustantimes.com/rss/sports/rssfeed.xml', 'https://www.sportskeeda.com/feed', 'https://www.mirror.co.uk/sport/?service=rss', 'https://sportstar.thehindu.com/feeder/default.rss', 'https://www.telegraph.co.uk/sport/rss.xml', 'https://rss.nytimes.com/services/xml/rss/nyt/Sports.xml', 'https://www.espncricinfo.com/rss/content/story/feeds/0.xml', 'https://www.cricbuzz.com/cricket-news/latest-news/rss', 'https://www.goal.com/en/feeds/news/', 'https://www.espn.com/espn/rss/soccer/news', 'https://www.skysports.com/rss/11095', 'http://feeds.bbci.co.uk/sport/football/rss.xml', 'https://www.theguardian.com/football/rss', 'https://www.atptour.com/en/media/rss-feed', 'https://www.tennis.com/rss/', 'https://www.fide.com/feed', 'http://www.chess.com/rss/news', 'https://www.fih.hockey/rss', 'https://www.thehockeypaper.co.uk/feed/', 'https://worldathletics.org/rss/news'
+            'https://www.espncricinfo.com/rss/content/story/feeds/0.xml',
+            'https://www.cricbuzz.com/cricket-news/latest-news/rss',
+            'https://timesofindia.indiatimes.com/rssfeeds/4719148.cms',
+            'https://www.thehindu.com/sport/feeder/default.rss',
+            'https://www.goal.com/en/feeds/news/',
+            'https://www.espn.com/espn/rss/soccer/news',
+            'http://feeds.bbci.co.uk/sport/football/rss.xml',
+            'https://www.theguardian.com/football/rss',
+            'https://www.atptour.com/en/media/rss-feed',
+            'https://www.fide.com/feed',
+            'https://worldathletics.org/rss/news',
+            'https://www.skysports.com/rss/11095'
         ];
 
         // --- SVG Icons for Sports ---
@@ -100,10 +112,8 @@
             Cricket: `<svg xmlns="http://www.w3.org/2000/svg" class="w-10 h-10 text-gray-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2Z"/><path d="m15.32 15.32 3.36 3.36"/><path d="M12 12a3 3 0 0 0-3 3"/><path d="M12 8a4 4 0 0 0-4 4"/></svg>`,
             Football: `<svg xmlns="http://www.w3.org/2000/svg" class="w-10 h-10 text-gray-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polygon points="12 2 12 12 18 12 12 22 12 12 6 12 12 2"></polygon></svg>`,
             Tennis: `<svg xmlns="http://www.w3.org/2000/svg" class="w-10 h-10 text-gray-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M12 12a5 5 0 0 0-5 5h10a5 5 0 0 0-5-5z"></path><path d="M12 2v2"></path><path d="M12 20v2"></path><path d="M5 7l-1.5 1.5"></path><path d="M19 7l1.5 1.5"></path></svg>`,
-            Hockey: `<svg xmlns="http://www.w3.org/2000/svg" class="w-10 h-10 text-gray-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.16 3.42a7.5 7.5 0 0 0-10.74 8.44l6.12 6.13a2 2 0 0 0 2.83 0l6.13-6.13a7.5 7.5 0 0 0-4.34-12.78z"></path><path d="m14 14-8 8"></path></svg>`,
             Athletics: `<svg xmlns="http://www.w3.org/2000/svg" class="w-10 h-10 text-gray-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a5 5 0 0 0-5 5c0 1.5.7 2.8 1.7 3.7L12 15l3.3-4.3c1- .9 1.7-2.2 1.7-3.7a5 5 0 0 0-5-5z"></path><path d="M12 15v7"></path><path d="M9 22h6"></path><path d="M5 11.5a5 5 0 0 1 7-4.5 5 5 0 0 1 7 4.5"></path></svg>`,
             Chess: `<svg xmlns="http://www.w3.org/2000/svg" class="w-10 h-10 text-gray-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a2 2 0 0 0-2-2h-1a2 2 0 0 0-2 2v2H9a2 2 0 0 0-2 2v1a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2v-1a2 2 0 0 0-2-2h-1V8z"></path><path d="M20 18v-2a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v2Z"></path><path d="M4 14v4h16v-4"></path><path d="M12 2v4"></path></svg>`,
-            'Formula 1': `<svg xmlns="http://www.w3.org/2000/svg" class="w-10 h-10 text-gray-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L3 7v10l9 5 9-5V7L12 2zm0 2.69L18.31 8 12 11.31 5.69 8 12 4.69zM4 8.13V16l7 3.87v-7.74L4 8.13zm16 0L13 12.26v7.74L20 16V8.13z"></path></svg>`,
             General: `<svg class="w-10 h-10 text-gray-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 7.5h1.5m-1.5 3h1.5m-7.5 3h7.5m-7.5 3h7.5m3-9h3.375c.621 0 1.125.504 1.125 1.125V18a2.25 2.25 0 0 1-2.25 2.25H6.75A2.25 2.25 0 0 1 4.5 18V6.375c0-.621.504-1.125 1.125-1.125H9.75" /></svg>`
         };
         
@@ -111,15 +121,22 @@
             console.log('Fetching latest news...');
             if (allArticles.length === 0) showLoader();
             
-            // Using a more reliable proxy service that doesn't require a key.
+            // Using a more reliable public proxy service.
             const PROXY_URL = "https://api.allorigins.win/raw?url=";
 
             const fetchPromises = RSS_SOURCES.map(async (feedUrl) => {
                 try {
                     const response = await fetch(PROXY_URL + encodeURIComponent(feedUrl));
                     if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                    
                     const text = await response.text();
                     const data = new window.DOMParser().parseFromString(text, "text/xml");
+                    
+                    // Check for parser errors, which can happen with malformed feeds
+                    if (data.querySelector("parsererror")) {
+                        console.error(`Parser error for feed: ${feedUrl}`);
+                        return [];
+                    }
                     
                     const sourceTitle = data.querySelector("channel > title")?.textContent || 'Unknown Source';
                     const items = [];
@@ -252,7 +269,7 @@
         function getArticleCategory(article) {
             const content = ((article.title || '') + ' ' + cleanDescription(article.description)).toLowerCase();
             const keywords = {
-                'Cricket': ['cricket', 'ipl', 'bcci', 'icc'], 'Football': ['football', 'soccer', 'epl', 'la liga', 'fifa', 'uefa', 'isl'], 'Tennis': ['tennis', 'atp', 'wta', 'grand slam', 'wimbledon'], 'Hockey': ['hockey', 'fih'], 'Athletics': ['athletics', 'track', 'marathon', 'olympics'], 'Chess': ['chess', 'fide'], 'Formula 1': ['f1', 'formula 1', 'motorsport']
+                'Cricket': ['cricket', 'ipl', 'bcci', 'icc'], 'Football': ['football', 'soccer', 'epl', 'la liga', 'fifa', 'uefa', 'isl'], 'Tennis': ['tennis', 'atp', 'wta', 'grand slam', 'wimbledon'], 'Athletics': ['athletics', 'track', 'marathon', 'olympics'], 'Chess': ['chess', 'fide']
             };
             for (const category in keywords) {
                 if (keywords[category].some(kw => content.includes(kw))) return category;
